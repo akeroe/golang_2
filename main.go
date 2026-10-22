@@ -37,12 +37,57 @@ func main() {
 		fmt.Println("После снятия:", user2.Name, user2.Balance)
 	}
 
+	ps := &PaymentSystem{
+		Users: make(map[string]*User),
+	}
+	ps.AddUser(user1)
+	fmt.Println(ps.Users["1"].Balance)
+	ps.AddUser(user2)
+	fmt.Println(ps.Users["2"].Balance)
+
+	t1 := Transaction{
+		FromID: "1",
+		ToID:   "2",
+		Amount: 200,
+	}
+	t2 := Transaction{
+		FromID: "2",
+		ToID:   "1",
+		Amount: 50,
+	}
+	ps.AddTransaction(t1)
+	ps.AddTransaction(t2)
+	fmt.Println("Транзакций в очереди:", len(ps.TransactionQueue))
+
+	err = ps.ProcessingTransaction(t1)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Transfer succesful")
+	}
+	err = ps.ProcessingTransaction(t2)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Transfer succesful")
+	}
 }
 
 type User struct {
 	ID      string
 	Name    string
 	Balance float64
+}
+
+type Transaction struct {
+	FromID string
+	ToID   string
+	Amount float64
+}
+
+type PaymentSystem struct {
+	Users            map[string]*User // хранение пользователей по ID. String - ключ (userid), *User - указатель на юзера
+	TransactionQueue []Transaction    // очередь денежных переводов
 }
 
 func (u *User) Deposit(dodep float64) { //dodep - сумма пополнения
@@ -58,4 +103,30 @@ func (u *User) Withdraw(withdr float64) error { //withdr сколько сним
 		return errors.New("Error: insufficient funds")
 
 	}
+}
+
+func (ps *PaymentSystem) AddUser(user *User) {
+	ps.Users[user.ID] = user
+}
+func (ps *PaymentSystem) AddTransaction(t Transaction) {
+	ps.TransactionQueue = append(ps.TransactionQueue, t)
+}
+
+func (ps *PaymentSystem) ProcessingTransaction(t Transaction) error {
+	sender, ok := ps.Users[t.FromID] // true or false существует ли ключ
+	if !ok {
+		return errors.New("sender not found")
+	}
+	receiver, ok := ps.Users[t.ToID]
+	if !ok {
+		return errors.New("receiver not found")
+	}
+	err := sender.Withdraw(t.Amount)
+	if err != nil {
+		return err
+	}
+	receiver.Deposit(t.Amount)
+
+	return nil
+
 }
