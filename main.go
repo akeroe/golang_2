@@ -55,22 +55,45 @@ func main() {
 		ToID:   "1",
 		Amount: 50,
 	}
+	t3 := Transaction{
+		FromID: "999",
+		ToID:   "2",
+		Amount: 100,
+	}
+
+
+
+
+	
 	ps.AddTransaction(t1)
 	ps.AddTransaction(t2)
+	ps.AddTransaction(t3)
 	fmt.Println("Транзакций в очереди:", len(ps.TransactionQueue))
 
-	err = ps.ProcessingTransaction(t1)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("Transfer succesful")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println("Transfer succesful")
+	// }
+	// err = ps.ProcessingTransaction(t2)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	fmt.Println("Transfer succesful")
+	// }
+
+	for _, t := range ps.TransactionQueue {
+		err = ps.ProcessingTransaction(t)
+		if err != nil {
+			fmt.Println(err) // получили ошибку из withdraw
+		} else {
+			fmt.Println("Transfer successfull")
+		}
+
 	}
-	err = ps.ProcessingTransaction(t2)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println("Transfer succesful")
-	}
+	fmt.Println("Баланс Max:", ps.Users["1"].Balance)
+	fmt.Println("Баланс Alex:", ps.Users["2"].Balance)
+
 }
 
 type User struct {
@@ -103,6 +126,7 @@ func (u *User) Withdraw(withdr float64) error { //withdr сколько сним
 		return errors.New("Error: insufficient funds")
 
 	}
+
 }
 
 func (ps *PaymentSystem) AddUser(user *User) {
