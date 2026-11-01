@@ -116,6 +116,7 @@ type User struct {
 	ID      string
 	Name    string
 	Balance float64
+	mu      sync.Mutex
 }
 
 type Transaction struct {
@@ -130,16 +131,20 @@ type PaymentSystem struct {
 }
 
 func (u *User) Deposit(dodep float64) { //dodep - сумма пополнения
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	u.Balance += dodep
 }
 
 func (u *User) Withdraw(withdr float64) error { //withdr сколько снимает
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	if withdr <= u.Balance {
 		u.Balance -= withdr
 		return nil
 
 	} else {
-		return errors.New("Error: insufficient funds")
+		return errors.New("Error: insufficient funds") // ошибка: недостаточно средств
 
 	}
 
