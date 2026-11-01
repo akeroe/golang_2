@@ -3,15 +3,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"sync"
 )
 
 func main() {
 	user1 := &User{
 		Name:    "Max",
 		ID:      "1",
-		Balance: 1000,
+		Balance: 10000,
 	}
-
 	user1.Deposit(200)
 	fmt.Println("После пополнения:", user1.Name, user1.Balance)
 
@@ -45,30 +45,46 @@ func main() {
 	ps.AddUser(user2)
 	fmt.Println(ps.Users["2"].Balance)
 
-	t1 := Transaction{
+	// t1 := Transaction{
+	// 	FromID: "1",
+	// 	ToID:   "2",
+	// 	Amount: 200,
+	// }
+	// t2 := Transaction{
+	// 	FromID: "2",
+	// 	ToID:   "1",
+	// 	Amount: 50,
+	// }
+	// t3 := Transaction{
+	// 	FromID: "999",
+	// 	ToID:   "2",
+	// 	Amount: 100,
+	// }
+	t1 := Transaction{ // 		DELETE СПЕЦОИАЛЬНО СДЕЛАЛ ГОНКУ ДАННЫХ
 		FromID: "1",
 		ToID:   "2",
-		Amount: 200,
+		Amount: 1,
 	}
-	t2 := Transaction{
-		FromID: "2",
-		ToID:   "1",
-		Amount: 50,
+	for i := 0; i < 1000; i++ { // DELETE СПЕЦИАЛЬНО СДЕЛАЛ ГОНКУ ДАННЫХ
+		ps.AddTransaction(t1)
 	}
-	t3 := Transaction{
-		FromID: "999",
-		ToID:   "2",
-		Amount: 100,
-	}
-
-
-
-
-	
-	ps.AddTransaction(t1)
-	ps.AddTransaction(t2)
-	ps.AddTransaction(t3)
+	// ps.AddTransaction(t2)
+	// ps.AddTransaction(t3)
 	fmt.Println("Транзакций в очереди:", len(ps.TransactionQueue))
+
+	ch := make(chan Transaction, len(ps.TransactionQueue))
+	for _, t := range ps.TransactionQueue { // перебираем очередь транзакций
+		ch <- t // передаем транзации в канал
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 3; i++ { // запуск 3х воркеров
+		wg.Add(1)
+		go ps.Worker(ch, &wg)
+
+	}
+	close(ch)
+	wg.Wait()
 
 	// if err != nil {
 	// 	fmt.Println(err)
@@ -82,15 +98,15 @@ func main() {
 	// 	fmt.Println("Transfer succesful")
 	// }
 
-	for _, t := range ps.TransactionQueue {
-		err = ps.ProcessingTransaction(t)
-		if err != nil {
-			fmt.Println(err) // получили ошибку из withdraw
-		} else {
-			fmt.Println("Transfer successfull")
-		}
+	// for _, t := range ps.TransactionQueue {
+	// 	err = ps.ProcessingTransaction(t)
+	// 	if err != nil {
+	// 		fmt.Println(err) // получили ошибку из withdraw
+	// 	} else {
+	// 		fmt.Println("Transfer successfull")
+	// 	}
 
-	}
+	// }
 	fmt.Println("Баланс Max:", ps.Users["1"].Balance)
 	fmt.Println("Баланс Alex:", ps.Users["2"].Balance)
 
@@ -153,4 +169,13 @@ func (ps *PaymentSystem) ProcessingTransaction(t Transaction) error {
 
 	return nil
 
+}
+func (ps *PaymentSystem) Worker(ch <-chan Transaction, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for t := range ch {
+		err := ps.ProcessingTransaction(t)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
