@@ -130,15 +130,22 @@ type PaymentSystem struct {
 	TransactionQueue []Transaction    // очередь денежных переводов
 }
 
-func (u *User) Deposit(dodep float64) { //dodep - сумма пополнения
+func (u *User) Deposit(dodep float64) error { //dodep - сумма пополнения
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	u.Balance += dodep
+	if dodep <= 0 {
+		return errors.New("invalid dodep")
+	} else {
+		u.Balance += dodep
+		return nil
+	}
 }
-
 func (u *User) Withdraw(withdr float64) error { //withdr сколько снимает
 	u.mu.Lock()
 	defer u.mu.Unlock()
+	if withdr <= 0 {
+		return errors.New("invalid amount")
+	}
 	if withdr <= u.Balance {
 		u.Balance -= withdr
 		return nil
@@ -171,7 +178,9 @@ func (ps *PaymentSystem) ProcessingTransaction(t Transaction) error {
 		return err
 	}
 	receiver.Deposit(t.Amount)
-
+	if err != nil {
+		return err
+	}
 	return nil
 
 }
